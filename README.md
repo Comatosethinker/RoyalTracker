@@ -105,6 +105,14 @@ Vision mode:
 
 The current vision mode detects major visual changes and saves suspicious frames in memory. It does not yet classify the exact card.
 
+Detected events can be exported from the Mac app. Export writes PNG frames and a `labels.jsonl` draft to:
+
+```text
+~/Documents/RoyalTracker/Captures/
+```
+
+Those files are intended for local review and labeling, not automatic upload.
+
 iOS route:
 
 1. Install the host app through Xcode, TestFlight, or side loading.

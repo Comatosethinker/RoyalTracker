@@ -43,6 +43,13 @@ struct VisionCaptureView: View {
                 }
                 .disabled(captureStore.detectionFrames.isEmpty)
 
+                Button {
+                    captureStore.exportFrames()
+                } label: {
+                    Label("导出事件", systemImage: "square.and.arrow.down")
+                }
+                .disabled(captureStore.detectionFrames.isEmpty)
+
                 Spacer()
             }
 
@@ -83,6 +90,10 @@ struct VisionCaptureView: View {
                     .padding(12)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
             } else {
+                Text("可导出为 PNG + labels.jsonl，用于后续人工标注和训练。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
                 ScrollView {
                     LazyVStack(spacing: 10) {
                         ForEach(captureStore.detectionFrames) { frame in

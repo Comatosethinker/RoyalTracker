@@ -16,6 +16,7 @@ final class CaptureStore {
     var framesPerSecond: Double = 8
     var statusText = "选择游戏窗口后开始识别。"
     var previewImageData: Data?
+    var lastExportURL: URL?
 
     @ObservationIgnored private var stream: SCStream?
     @ObservationIgnored private var streamOutput: CaptureStreamOutput?
@@ -102,6 +103,45 @@ final class CaptureStore {
 
     func clearFrames() {
         detectionFrames.removeAll()
+    }
+
+    func exportFrames() {
+        guard !detectionFrames.isEmpty else {
+            statusText = "没有可导出的事件。"
+            return
+        }
+
+        do {
+            let exportURL = try makeExportFolder()
+            var labelLines: [String] = []
+
+            for (index, frame) in detectionFrames.reversed().enumerated() {
+                let frameName = String(format: "event-%03d.png", index + 1)
+                if let image = frame.image {
+                    try image.write(to: exportURL.appendingPathComponent(frameName), options: .atomic)
+                }
+
+                let label = ExportedFrameLabel(
+                    fileName: frameName,
+                    timestamp: frame.timestamp,
+                    matchElapsed: frame.matchElapsed,
+                    movementScore: frame.movementScore
+                )
+                let encoded = try JSONEncoder.royalTracker.encode(label)
+                if let line = String(data: encoded, encoding: .utf8) {
+                    labelLines.append(line)
+                }
+            }
+
+            let labelText = labelLines.joined(separator: "\n").appending("\n")
+            try labelText.write(to: exportURL.appendingPathComponent("labels.jsonl"), atomically: true, encoding: .utf8)
+
+            lastExportURL = exportURL
+            statusText = "已导出 \(detectionFrames.count) 个事件到 Captures。"
+            NSWorkspace.shared.activateFileViewerSelecting([exportURL])
+        } catch {
+            statusText = "导出失败，请检查项目目录权限。"
+        }
     }
 
     func handleFrame(_ image: CGImage) {
@@ -209,6 +249,60 @@ final class CaptureStore {
 
 private enum CaptureError: Error {
     case windowNotFound
+}
+
+private struct ExportedFrameLabel: Codable {
+    let schemaVersion = 1
+    let fileName: String
+    let timestamp: Date
+    let matchElapsed: TimeInterval
+    let movementScore: Double
+    let isCardPlay: Bool? = nil
+    let cardID: String? = nil
+    let notes: String = ""
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion = "schema_version"
+        case fileName = "file_name"
+        case timestamp
+        case matchElapsed = "match_elapsed"
+        case movementScore = "movement_score"
+        case isCardPlay = "is_card_play"
+        case cardID = "card_id"
+        case notes
+    }
+}
+
+private extension CaptureStore {
+    func makeExportFolder() throws -> URL {
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? FileManager.default.homeDirectoryForCurrentUser
+        let root = documents
+            .appendingPathComponent("RoyalTracker", isDirectory: true)
+            .appendingPathComponent("Captures", isDirectory: true)
+        let stamp = ExportDateFormatter.shared.string(from: Date())
+        let folder = root.appendingPathComponent("session-\(stamp)", isDirectory: true)
+
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        return folder
+    }
+}
+
+private enum ExportDateFormatter {
+    static let shared: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return formatter
+    }()
+}
+
+private extension JSONEncoder {
+    static var royalTracker: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.sortedKeys]
+        return encoder
+    }
 }
 
 private final class CaptureStreamOutput: NSObject, SCStreamOutput {
