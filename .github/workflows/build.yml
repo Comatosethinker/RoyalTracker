@@ -1,0 +1,19 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  swift:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with SwiftPM
+        run: swift build
+      - name: Compile app entrypoint directly
+        run: |
+          mkdir -p .build-cache/clang
+          CLANG_MODULE_CACHE_PATH="$PWD/.build-cache/clang" \
+            xcrun swiftc -parse-as-library $(find Sources/RoyalTracker -name '*.swift' | sort) \
+            -o /tmp/RoyalTrackerCheck

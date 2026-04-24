@@ -1,0 +1,15 @@
+.DS_Store
+.build/
+.build-cache/
+dist/
+DerivedData/
+*.xcuserdata/
+*.xcuserstate
+*.swp
+*.log
+
+# Local captures and user-labeled datasets can be large or private.
+Captures/
+Datasets/local/
+*.mov
+*.mp4
