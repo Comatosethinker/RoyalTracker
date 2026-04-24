@@ -7,6 +7,7 @@ DerivedData/
 *.xcuserstate
 *.swp
 *.log
+.local-keys/
 
 # Local captures and user-labeled datasets can be large or private.
 Captures/

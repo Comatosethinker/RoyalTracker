@@ -146,6 +146,8 @@ The project is intended to support opt-in community labeling. See [docs/DATASET.
 
 Do not upload full private recordings by default. Prefer cropped event clips with labels.
 
+Training should happen in a private lab repository. See [docs/TRAINING_PIPELINE.md](docs/TRAINING_PIPELINE.md).
+
 ## Distribution Plan
 
 - GitHub: source code, issues, dataset schema, contributor docs

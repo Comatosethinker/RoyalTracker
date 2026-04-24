@@ -17,6 +17,8 @@ final class CaptureStore {
     var statusText = "选择游戏窗口后开始识别。"
     var previewImageData: Data?
     var lastExportURL: URL?
+    var selectedFrameID: UUID?
+    var annotations: [UUID: DetectionAnnotation] = [:]
 
     @ObservationIgnored private var stream: SCStream?
     @ObservationIgnored private var streamOutput: CaptureStreamOutput?
@@ -28,6 +30,10 @@ final class CaptureStore {
 
     var selectedWindow: CapturableWindow? {
         windows.first { $0.id == selectedWindowID }
+    }
+
+    var selectedFrame: DetectionFrame? {
+        detectionFrames.first { $0.id == selectedFrameID } ?? detectionFrames.first
     }
 
     func refreshWindows() {
@@ -103,6 +109,16 @@ final class CaptureStore {
 
     func clearFrames() {
         detectionFrames.removeAll()
+        annotations.removeAll()
+        selectedFrameID = nil
+    }
+
+    func annotation(for frame: DetectionFrame) -> DetectionAnnotation {
+        annotations[frame.id] ?? DetectionAnnotation()
+    }
+
+    func updateAnnotation(for frame: DetectionFrame, _ annotation: DetectionAnnotation) {
+        annotations[frame.id] = annotation
     }
 
     func exportFrames() {
@@ -125,7 +141,8 @@ final class CaptureStore {
                     fileName: frameName,
                     timestamp: frame.timestamp,
                     matchElapsed: frame.matchElapsed,
-                    movementScore: frame.movementScore
+                    movementScore: frame.movementScore,
+                    annotation: annotation(for: frame)
                 )
                 let encoded = try JSONEncoder.royalTracker.encode(label)
                 if let line = String(data: encoded, encoding: .utf8) {
@@ -171,6 +188,7 @@ final class CaptureStore {
         )
         detectionFrames.insert(frame, at: 0)
         detectionFrames = Array(detectionFrames.prefix(24))
+        selectedFrameID = frame.id
         statusText = "检测到疑似出牌动画。"
     }
 
@@ -257,9 +275,27 @@ private struct ExportedFrameLabel: Codable {
     let timestamp: Date
     let matchElapsed: TimeInterval
     let movementScore: Double
-    let isCardPlay: Bool? = nil
-    let cardID: String? = nil
-    let notes: String = ""
+    let labelKind: DetectionLabelKind
+    let isCardPlay: Bool?
+    let cardID: String?
+    let notes: String
+
+    init(
+        fileName: String,
+        timestamp: Date,
+        matchElapsed: TimeInterval,
+        movementScore: Double,
+        annotation: DetectionAnnotation
+    ) {
+        self.fileName = fileName
+        self.timestamp = timestamp
+        self.matchElapsed = matchElapsed
+        self.movementScore = movementScore
+        self.labelKind = annotation.kind
+        self.isCardPlay = annotation.kind == .unknown ? nil : annotation.kind == .cardPlay
+        self.cardID = annotation.cardID
+        self.notes = annotation.notes
+    }
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
@@ -267,6 +303,7 @@ private struct ExportedFrameLabel: Codable {
         case timestamp
         case matchElapsed = "match_elapsed"
         case movementScore = "movement_score"
+        case labelKind = "label_kind"
         case isCardPlay = "is_card_play"
         case cardID = "card_id"
         case notes

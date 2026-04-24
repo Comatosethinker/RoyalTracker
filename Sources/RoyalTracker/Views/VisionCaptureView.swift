@@ -94,10 +94,21 @@ struct VisionCaptureView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
+                if let frame = captureStore.selectedFrame {
+                    AnnotationPanel(captureStore: captureStore, frame: frame)
+                }
+
                 ScrollView {
                     LazyVStack(spacing: 10) {
                         ForEach(captureStore.detectionFrames) { frame in
-                            DetectionFrameRow(frame: frame)
+                            DetectionFrameRow(
+                                frame: frame,
+                                annotation: captureStore.annotation(for: frame),
+                                isSelected: captureStore.selectedFrameID == frame.id
+                            )
+                            .onTapGesture {
+                                captureStore.selectedFrameID = frame.id
+                            }
                         }
                     }
                 }
@@ -112,6 +123,76 @@ struct VisionCaptureView: View {
         .onDisappear {
             captureStore.stop()
         }
+    }
+}
+
+private struct AnnotationPanel: View {
+    @Bindable var captureStore: CaptureStore
+    let frame: DetectionFrame
+
+    private var annotationBinding: Binding<DetectionAnnotation> {
+        Binding {
+            captureStore.annotation(for: frame)
+        } set: { updated in
+            captureStore.updateAnnotation(for: frame, updated)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("事件标注")
+                    .font(.headline)
+                Spacer()
+                Text("变化 \(Int(frame.movementScore * 100))%")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Picker("类型", selection: Binding(
+                get: { annotationBinding.wrappedValue.kind },
+                set: { newValue in
+                    var updated = annotationBinding.wrappedValue
+                    updated.kind = newValue
+                    if newValue != .cardPlay {
+                        updated.cardID = nil
+                    }
+                    annotationBinding.wrappedValue = updated
+                }
+            )) {
+                ForEach(DetectionLabelKind.allCases) { kind in
+                    Text(kind.rawValue).tag(kind)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            Picker("卡牌", selection: Binding(
+                get: { annotationBinding.wrappedValue.cardID },
+                set: { newValue in
+                    var updated = annotationBinding.wrappedValue
+                    updated.cardID = newValue
+                    annotationBinding.wrappedValue = updated
+                }
+            )) {
+                Text("未选择").tag(String?.none)
+                ForEach(CardCatalog.cards) { card in
+                    Text("\(card.name) · \(card.elixir)").tag(Optional(card.id))
+                }
+            }
+            .disabled(annotationBinding.wrappedValue.kind != .cardPlay)
+
+            TextField("备注，例如遮挡、混战、像克隆", text: Binding(
+                get: { annotationBinding.wrappedValue.notes },
+                set: { newValue in
+                    var updated = annotationBinding.wrappedValue
+                    updated.notes = newValue
+                    annotationBinding.wrappedValue = updated
+                }
+            ))
+            .textFieldStyle(.roundedBorder)
+        }
+        .padding(12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
     }
 }
 
@@ -142,6 +223,8 @@ private struct PreviewPanel: View {
 
 private struct DetectionFrameRow: View {
     let frame: DetectionFrame
+    let annotation: DetectionAnnotation
+    let isSelected: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -163,6 +246,9 @@ private struct DetectionFrameRow: View {
                 Text("对局 \(MatchFormatters.clock(frame.matchElapsed)) · 变化 \(Int(frame.movementScore * 100))%")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Text(annotationSummary)
+                    .font(.caption)
+                    .foregroundStyle(annotation.kind == .unknown ? Color.secondary : Color.blue)
             }
 
             Spacer()
@@ -172,5 +258,18 @@ private struct DetectionFrameRow: View {
         }
         .padding(10)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isSelected ? .blue.opacity(0.7) : .clear, lineWidth: 2)
+        }
+    }
+
+    private var annotationSummary: String {
+        if annotation.kind == .cardPlay,
+           let cardID = annotation.cardID,
+           let card = CardCatalog.cards.first(where: { $0.id == cardID }) {
+            return "\(annotation.kind.rawValue): \(card.name)"
+        }
+        return annotation.kind.rawValue
     }
 }

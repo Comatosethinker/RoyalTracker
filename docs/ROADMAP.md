@@ -28,6 +28,7 @@
 - Local labeling UI
 - Export dataset labels as JSON
 - Negative-example labeling
+- Private lab import workflow
 
 ## v0.5 Recognition
 

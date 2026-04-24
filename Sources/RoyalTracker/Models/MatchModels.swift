@@ -64,3 +64,19 @@ struct DetectionFrame: Identifiable {
     let movementScore: Double
     let image: Data?
 }
+
+enum DetectionLabelKind: String, CaseIterable, Identifiable, Codable {
+    case unknown = "未标注"
+    case cardPlay = "真实出牌"
+    case falsePositive = "误报"
+    case summonOrSpawn = "召唤/产物"
+    case cloneEffect = "克隆效果"
+
+    var id: String { rawValue }
+}
+
+struct DetectionAnnotation: Codable, Hashable {
+    var kind: DetectionLabelKind = .unknown
+    var cardID: String?
+    var notes: String = ""
+}
