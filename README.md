@@ -1,6 +1,13 @@
 # RoyalTracker
 
-RoyalTracker is an experimental macOS assistant for Clash Royale card-cycle and elixir tracking.
+RoyalTracker is an experimental Clash Royale card-cycle and elixir tracking project.
+
+The intended product route is iPhone-first:
+
+- iOS Broadcast Upload Extension captures the screen after the user starts screen recording
+- local recognition detects suspected opponent card plays
+- results are shown through a second-screen panel, voice, Apple Watch, or a companion device
+- macOS remains the fastest development and dataset-labeling tool
 
 The project is designed as an external observation tool:
 
@@ -8,6 +15,7 @@ The project is designed as an external observation tool:
 - estimated opponent elixir calculation
 - card-cycle inference
 - ScreenCaptureKit-based game-window capture
+- ReplayKit Broadcast Upload Extension scaffold for iOS
 - suspicious play-animation frame detection
 - future local card-recognition and community labeling workflow
 
@@ -26,9 +34,13 @@ Working now:
 - window selection through ScreenCaptureKit
 - live capture preview
 - motion-based suspicious event detection
+- iOS Broadcast Extension code scaffold
 
 Planned next:
 
+- Xcode iOS app project and entitlements
+- App Group transport between the broadcast extension and host app
+- second-screen status panel
 - event clip export
 - local labeling UI
 - dataset import/export
@@ -37,9 +49,19 @@ Planned next:
 
 ## Requirements
 
+macOS prototype:
+
 - macOS 14 or newer
 - Xcode or Apple Command Line Tools
 - Screen Recording permission when using vision mode
+
+iOS prototype:
+
+- iOS 17 or newer recommended
+- Xcode
+- Apple Developer account for reliable device testing
+- Broadcast Upload Extension target
+- App Group capability shared by the host app and extension
 
 ## Run
 
@@ -83,6 +105,17 @@ Vision mode:
 
 The current vision mode detects major visual changes and saves suspicious frames in memory. It does not yet classify the exact card.
 
+iOS route:
+
+1. Install the host app through Xcode, TestFlight, or side loading.
+2. Open Control Center on iPhone.
+3. Long-press Screen Recording.
+4. Choose the RoyalTracker broadcast extension.
+5. Start the broadcast.
+6. The extension receives screen frames and forwards recognition events to the host app or a second-screen panel.
+
+See [iOS/README.md](iOS/README.md).
+
 ## Recognition Approach
 
 RoyalTracker should recognize the moment of card deployment rather than treating every new battlefield unit as a played card. This matters because cards such as Witch, Night Witch, buildings, clone effects, and death spawns can create new units that are not new card plays.
@@ -104,6 +137,13 @@ screen frames
 The project is intended to support opt-in community labeling. See [docs/DATASET.md](docs/DATASET.md).
 
 Do not upload full private recordings by default. Prefer cropped event clips with labels.
+
+## Distribution Plan
+
+- GitHub: source code, issues, dataset schema, contributor docs
+- Side loading: technical users can build with Xcode and install to their own devices
+- TestFlight: practical early-user distribution
+- App Store: not the first target because review risk is higher for game-adjacent screen-recognition tools
 
 ## Disclaimer
 

@@ -45,6 +45,8 @@ Good first areas:
 - add local labeling UI
 - tune motion detection
 - improve ScreenCaptureKit error messages
+- turn the iOS scaffold into a complete Xcode project
+- wire App Group entitlements for the host app and broadcast extension
 - add classifier interfaces and tests
 
 Keep PRs small and focused. For recognition work, include sample cases and explain false positives.
